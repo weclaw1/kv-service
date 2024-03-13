@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let addr = "0.0.0.0:8081".parse()?;
+    let addr = "127.0.0.1:8081".parse()?;
     let storage = RwLock::new(HashMap::new());
     let key_value_service = KeyValueService::new(storage);
 

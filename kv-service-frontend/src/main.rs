@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let client = KeyValueServiceClient::connect("http://0.0.0.0:8081").await?;
+    let client = KeyValueServiceClient::connect("http://127.0.0.1:8081").await?;
 
     let app = Router::new()
         .route(
@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .with_state(client);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     tracing::info!("Listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
