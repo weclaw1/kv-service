@@ -7,9 +7,16 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, Tr
 use tracing::Level;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::key_value_service::key_value_service_client::KeyValueServiceClient;
+
 mod controllers;
 mod error;
 mod services;
+mod utils;
+
+pub mod key_value_service {
+    tonic::include_proto!("keyvalueservice");
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -21,6 +28,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    let client = KeyValueServiceClient::connect("http://0.0.0.0:8081").await?;
 
     let app = Router::new()
         .route(
@@ -40,7 +49,8 @@ async fn main() -> anyhow::Result<()> {
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                 .on_request(DefaultOnRequest::new().level(Level::INFO))
                 .on_response(DefaultOnResponse::new().level(Level::INFO)),
-        );
+        )
+        .with_state(client);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     tracing::info!("Listening on {}", addr);
