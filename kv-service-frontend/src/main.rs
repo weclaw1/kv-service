@@ -3,7 +3,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
     key_value_service::key_value_service_client::KeyValueServiceClient,
-    services::key_value_service::GrpcKeyValueService,
+    services::key_value_service::{GrpcKeyValueService, KeyValueServiceGrpcClient},
 };
 
 mod controllers;
@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let client = KeyValueServiceClient::connect("http://127.0.0.1:8081").await?;
 
     let state = controllers::AppState {
-        key_value_service: Arc::new(GrpcKeyValueService::new(client)),
+        key_value_service: Arc::new(GrpcKeyValueService::new(KeyValueServiceGrpcClient(client))),
     };
 
     let app = controllers::create_router(state);

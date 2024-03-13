@@ -1,5 +1,6 @@
 use serde_json::Value;
-use std::{collections::HashMap, sync::RwLock};
+use std::collections::HashMap;
+use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 
 use crate::{
@@ -16,8 +17,10 @@ pub struct KeyValueService {
 }
 
 impl KeyValueService {
-    pub fn new(storage: RwLock<HashMap<String, Value>>) -> Self {
-        Self { storage }
+    pub fn new(storage: HashMap<String, Value>) -> Self {
+        Self {
+            storage: RwLock::new(storage),
+        }
     }
 }
 
@@ -27,7 +30,7 @@ impl KeyValueServiceTrait for KeyValueService {
         tracing::info!("Received get request: {:?}", request.get_ref());
         let value = {
             tracing::info!("Reading from storage");
-            let storage = self.storage.read().unwrap();
+            let storage = self.storage.read().await;
             storage.get(request.into_inner().key.as_str()).cloned()
         };
         tracing::info!("Read from storage");
@@ -49,7 +52,7 @@ impl KeyValueServiceTrait for KeyValueService {
         };
         let previous_value = {
             tracing::info!("Writing to storage");
-            let mut storage = self.storage.write().unwrap();
+            let mut storage = self.storage.write().await;
             storage.insert(key, prost_to_serde_json(value))
         };
         tracing::info!("Wrote to storage");
@@ -68,7 +71,7 @@ impl KeyValueServiceTrait for KeyValueService {
         tracing::info!("Received delete request: {:?}", request.get_ref());
         let removed_value = {
             tracing::info!("Deleting from storage");
-            let mut storage = self.storage.write().unwrap();
+            let mut storage = self.storage.write().await;
             storage.remove(request.into_inner().key.as_str())
         };
         tracing::info!("Deleted from storage");
@@ -78,5 +81,54 @@ impl KeyValueServiceTrait for KeyValueService {
         };
         tracing::info!("Sending delete response: {:?}", response);
         Ok(Response::new(response))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get() {
+        let mut storage = HashMap::new();
+        storage.insert("key".to_string(), serde_json::json!("value"));
+        let service = KeyValueService::new(storage);
+        let request = Request::new(KeyRequest {
+            key: "key".to_string(),
+        });
+        let response = service.get(request).await.unwrap().into_inner();
+        assert_eq!(
+            response.value,
+            Some(serde_json_to_prost(serde_json::json!("value")))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_set() {
+        let storage = HashMap::new();
+        let service = KeyValueService::new(storage);
+        let request = Request::new(KeyValueRequest {
+            key: "key".to_string(),
+            value: Some(serde_json_to_prost(serde_json::json!("value"))),
+        });
+        let response = service.set(request).await.unwrap().into_inner();
+        assert_eq!(response.updated, false);
+        assert_eq!(
+            service.storage.read().await.get("key"),
+            Some(&serde_json::json!("value"))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_delete() {
+        let mut storage = HashMap::new();
+        storage.insert("key".to_string(), serde_json::json!("value"));
+        let service = KeyValueService::new(storage);
+        let request = Request::new(KeyRequest {
+            key: "key".to_string(),
+        });
+        let response = service.delete(request).await.unwrap().into_inner();
+        assert_eq!(response.deleted, true);
+        assert_eq!(service.storage.read().await.get("key"), None);
     }
 }

@@ -88,4 +88,101 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         assert_eq!(response.0, Some(value));
     }
+
+    #[tokio::test]
+    async fn test_put_value() {
+        let key = "key".to_string();
+        let value = Value::String("value".to_string());
+
+        let mut key_value_service = MockKeyValueService::new();
+        key_value_service
+            .expect_put_value()
+            .with(eq(key.clone()), eq(value.clone()))
+            .returning(move |_, _| Ok(true));
+
+        let state = AppState {
+            key_value_service: Arc::new(key_value_service),
+        };
+
+        let status = put_value(State(state), Path(key), Json(value))
+            .await
+            .unwrap();
+        assert_eq!(status, StatusCode::NO_CONTENT);
+    }
+
+    #[tokio::test]
+    async fn test_delete_value() {
+        let key = "key".to_string();
+
+        let mut key_value_service = MockKeyValueService::new();
+        key_value_service
+            .expect_delete_value()
+            .with(eq(key.clone()))
+            .returning(move |_| Ok(true));
+
+        let state = AppState {
+            key_value_service: Arc::new(key_value_service),
+        };
+
+        let status = delete_value(State(state), Path(key)).await.unwrap();
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_get_value_not_found() {
+        let key = "key".to_string();
+
+        let mut key_value_service = MockKeyValueService::new();
+        key_value_service
+            .expect_get_value()
+            .with(eq(key.clone()))
+            .returning(move |_| Ok(None));
+
+        let state = AppState {
+            key_value_service: Arc::new(key_value_service),
+        };
+
+        let (status, response) = get_value(State(state), Path(key)).await.unwrap();
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert_eq!(response.0, None);
+    }
+
+    #[tokio::test]
+    async fn test_delete_value_not_found() {
+        let key = "key".to_string();
+
+        let mut key_value_service = MockKeyValueService::new();
+        key_value_service
+            .expect_delete_value()
+            .with(eq(key.clone()))
+            .returning(move |_| Ok(false));
+
+        let state = AppState {
+            key_value_service: Arc::new(key_value_service),
+        };
+
+        let status = delete_value(State(state), Path(key)).await.unwrap();
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_put_value_created() {
+        let key = "key".to_string();
+        let value = Value::String("value".to_string());
+
+        let mut key_value_service = MockKeyValueService::new();
+        key_value_service
+            .expect_put_value()
+            .with(eq(key.clone()), eq(value.clone()))
+            .returning(move |_, _| Ok(false));
+
+        let state = AppState {
+            key_value_service: Arc::new(key_value_service),
+        };
+
+        let status = put_value(State(state), Path(key), Json(value))
+            .await
+            .unwrap();
+        assert_eq!(status, StatusCode::CREATED);
+    }
 }

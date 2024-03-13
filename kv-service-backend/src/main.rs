@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::RwLock};
+use std::collections::HashMap;
 
 use key_value_service::key_value_service_server::KeyValueServiceServer;
 use services::key_value_service::KeyValueService;
@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let addr = "127.0.0.1:8081".parse()?;
-    let storage = RwLock::new(HashMap::new());
+    let storage = HashMap::new();
     let key_value_service = KeyValueService::new(storage);
 
     Server::builder()
