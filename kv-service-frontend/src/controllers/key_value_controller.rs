@@ -4,19 +4,17 @@ use axum::{
     Json,
 };
 use serde_json::Value;
-use tonic::transport::Channel;
 
-use crate::{
-    error::ServiceError, key_value_service::key_value_service_client::KeyValueServiceClient,
-    services::key_value_service,
-};
+use crate::error::ServiceError;
+
+use super::AppState;
 
 pub async fn get_value(
-    State(client): State<KeyValueServiceClient<Channel>>,
+    State(state): State<AppState>,
     Path(key): Path<String>,
 ) -> Result<(StatusCode, Json<Option<Value>>), ServiceError> {
     tracing::debug!("Getting value for key: {}", key);
-    let value = key_value_service::get_value(client, &key).await?;
+    let value = state.key_value_service.get_value(&key).await?;
     let response = if let Some(value) = value {
         tracing::debug!("Got value: {:?} for key: {}", value, key);
         (StatusCode::OK, Json(Some(value)))
@@ -28,12 +26,12 @@ pub async fn get_value(
 }
 
 pub async fn put_value(
-    State(client): State<KeyValueServiceClient<Channel>>,
+    State(state): State<AppState>,
     Path(key): Path<String>,
     body: Json<Value>,
 ) -> Result<StatusCode, ServiceError> {
     tracing::debug!("Putting value {} for key {}", body.0, key);
-    let updated = key_value_service::put_value(client, &key, body.0).await?;
+    let updated = state.key_value_service.put_value(&key, body.0).await?;
     let response = if updated {
         tracing::debug!("Updated value for key: {}", key);
         StatusCode::NO_CONTENT
@@ -45,11 +43,11 @@ pub async fn put_value(
 }
 
 pub async fn delete_value(
-    State(client): State<KeyValueServiceClient<Channel>>,
+    State(state): State<AppState>,
     Path(key): Path<String>,
 ) -> Result<StatusCode, ServiceError> {
     tracing::debug!("Deleting value for key: {}", key);
-    let deleted = key_value_service::delete_value(client, &key).await?;
+    let deleted = state.key_value_service.delete_value(&key).await?;
     let response = if deleted {
         tracing::debug!("Deleted value for key: {}", key);
         StatusCode::OK
@@ -58,4 +56,36 @@ pub async fn delete_value(
         StatusCode::NOT_FOUND
     };
     Ok(response)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use mockall::predicate::eq;
+
+    use crate::services::key_value_service::MockKeyValueService;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_value() {
+        let key = "key".to_string();
+        let value = Value::String("value".to_string());
+
+        let mut key_value_service = MockKeyValueService::new();
+        let cloned_value = value.clone();
+        key_value_service
+            .expect_get_value()
+            .with(eq(key.clone()))
+            .returning(move |_| Ok(Some(cloned_value.clone())));
+
+        let state = AppState {
+            key_value_service: Arc::new(key_value_service),
+        };
+
+        let (status, response) = get_value(State(state), Path(key)).await.unwrap();
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response.0, Some(value));
+    }
 }

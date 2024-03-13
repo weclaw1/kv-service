@@ -5,6 +5,7 @@ use axum::{
 };
 use serde_json::json;
 
+#[derive(Debug)]
 pub struct ServiceError(anyhow::Error);
 
 impl IntoResponse for ServiceError {

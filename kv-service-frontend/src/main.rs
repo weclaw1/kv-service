@@ -1,13 +1,10 @@
-use axum::{
-    routing::{delete, get, put},
-    Router,
-};
-use std::net::SocketAddr;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tracing::Level;
+use std::{net::SocketAddr, sync::Arc};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::key_value_service::key_value_service_client::KeyValueServiceClient;
+use crate::{
+    key_value_service::key_value_service_client::KeyValueServiceClient,
+    services::key_value_service::GrpcKeyValueService,
+};
 
 mod controllers;
 mod error;
@@ -31,26 +28,11 @@ async fn main() -> anyhow::Result<()> {
 
     let client = KeyValueServiceClient::connect("http://127.0.0.1:8081").await?;
 
-    let app = Router::new()
-        .route(
-            "/api/:key",
-            get(controllers::key_value_controller::get_value),
-        )
-        .route(
-            "/api/:key",
-            put(controllers::key_value_controller::put_value),
-        )
-        .route(
-            "/api/:key",
-            delete(controllers::key_value_controller::delete_value),
-        )
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
-                .on_response(DefaultOnResponse::new().level(Level::INFO)),
-        )
-        .with_state(client);
+    let state = controllers::AppState {
+        key_value_service: Arc::new(GrpcKeyValueService::new(client)),
+    };
+
+    let app = controllers::create_router(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     tracing::info!("Listening on {}", addr);
