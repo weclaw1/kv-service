@@ -3,11 +3,19 @@ use serde_json::Value;
 
 use crate::{error::ServiceError, services::key_value_service};
 
-pub async fn get_value(Path(key): Path<String>) -> Result<Json<Value>, ServiceError> {
+pub async fn get_value(
+    Path(key): Path<String>,
+) -> Result<(StatusCode, Json<Option<Value>>), ServiceError> {
     tracing::debug!("Getting value for key: {}", key);
     let value = key_value_service::get_value(&key).await?;
-    tracing::debug!("Got value: {:?}", value);
-    Ok(Json(value))
+    let response = if let Some(value) = value {
+        tracing::debug!("Got value: {:?} for key: {}", value, key);
+        (StatusCode::OK, Json(Some(value)))
+    } else {
+        tracing::debug!("Value for key not found: {}", key);
+        (StatusCode::NOT_FOUND, Json(None))
+    };
+    Ok(response)
 }
 
 pub async fn put_value(

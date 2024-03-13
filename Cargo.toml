@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "kv-service-frontend",
+    "kv-service-backend",
+]
+resolver = "2"
