@@ -38,6 +38,7 @@ async fn main() -> anyhow::Result<()> {
     let storage = HashMap::new();
     let key_value_service = KeyValueService::new(storage);
 
+    tracing::info!("Listening on {}", addr);
     Server::builder()
         .tls_config(
             ServerTlsConfig::new()
