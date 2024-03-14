@@ -257,6 +257,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "dotenvy"
+version = "0.15.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+
+[[package]]
 name = "downcast"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -645,6 +651,7 @@ name = "kv-service-backend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dotenvy",
  "prost",
  "prost-types",
  "serde",
@@ -663,6 +670,8 @@ dependencies = [
  "anyhow",
  "axum 0.7.4",
  "axum-server",
+ "dotenvy",
+ "either",
  "mockall",
  "prost",
  "prost-types",

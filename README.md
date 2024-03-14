@@ -80,19 +80,19 @@ cd kv-service
 You need to generate TLS certificates for HTTPS support. You can use OpenSSL or any other tool for this purpose.
 
 ```bash
-#Create a root CA
+# Create a root CA
 openssl req -x509 -noenc -subj '/CN=example.com' -newkey rsa:4096 -keyout root.key -out root.crt
 
-#Create a client certificate signing request
+# Create a client certificate signing request
 openssl req -noenc -newkey rsa:4096 -keyout client.key -out client.csr -subj '/CN=example.com' -addext subjectAltName=DNS:example.com
 
-#Create a server certificate signing request
+# Create a server certificate signing request
 openssl req -noenc -newkey rsa:4096 -keyout server.key -out server.csr -subj '/CN=example.com' -addext subjectAltName=DNS:example.com
 
-#Sign client CSR using root CA
+# Sign client CSR using root CA
 openssl x509 -req -in client.csr -CA root.crt -CAkey root.key -days 365 -out client.crt -copy_extensions copy
 
-#Sign server CSR using root CA
+# Sign server CSR using root CA
 openssl x509 -req -in server.csr -CA root.crt -CAkey root.key -days 365 -out server.crt -copy_extensions copy
 ```
 
@@ -110,16 +110,25 @@ cargo build
 ### Backend Service
 
 ```bash
+# Without TLS
 cargo run -p kv-service-backend
+
+# With TLS
+TLS=true cargo run -p kv-service-backend
 ```
 
 ### Frontend Service
 
 ```bash
+# Without TLS
 cargo run -p kv-service-frontend
+
+# With TLS
+TLS=true cargo run -p kv-service-frontend
 ```
 
 By default, the backend service runs on `localhost:8081`, and the frontend service runs on `localhost:8080`.
+If you want to change the address please change it in .env file or by changing environment variables.
 
 ## Usage
 

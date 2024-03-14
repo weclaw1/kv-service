@@ -18,6 +18,8 @@ anyhow = "1.0.75"
 tonic = { version = "0.11", features = ["tls"] }
 prost = "0.12"
 prost-types = "0.12"
+dotenvy = "0.15.7"
+either = "1.10.0"
 
 [dev-dependencies]
 mockall = "0.12.1"
