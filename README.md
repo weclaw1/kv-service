@@ -80,17 +80,23 @@ cd kv-service
 You need to generate TLS certificates for HTTPS support. You can use OpenSSL or any other tool for this purpose.
 
 ```bash
-#Create a CA
+#Create a root CA
 openssl req -x509 -noenc -subj '/CN=example.com' -newkey rsa:4096 -keyout root.key -out root.crt
 
-#Create a certificate signing request
+#Create a client certificate signing request
 openssl req -noenc -newkey rsa:4096 -keyout client.key -out client.csr -subj '/CN=example.com' -addext subjectAltName=DNS:example.com
 
-#Sign it using your CA
+#Create a server certificate signing request
+openssl req -noenc -newkey rsa:4096 -keyout server.key -out server.csr -subj '/CN=example.com' -addext subjectAltName=DNS:example.com
+
+#Sign client CSR using root CA
 openssl x509 -req -in client.csr -CA root.crt -CAkey root.key -days 365 -out client.crt -copy_extensions copy
+
+#Sign server CSR using root CA
+openssl x509 -req -in server.csr -CA root.crt -CAkey root.key -days 365 -out server.crt -copy_extensions copy
 ```
 
-Place `client.crt`, `client.key` and `root.crt` files in the `tls` directory.
+Place `server.crt`, `server.key`, `client.crt`, `client.key` and `root.crt` files in the `tls` directory.
 
 ### Building the Services
 In the `kv-service` folder run
