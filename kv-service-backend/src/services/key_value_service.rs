@@ -50,10 +50,14 @@ impl KeyValueServiceTrait for KeyValueService {
         let Some(value) = value else {
             return Err(Status::invalid_argument("value must be set"));
         };
+        let value = prost_to_serde_json(value);
+        if value.is_null() {
+            return Err(Status::invalid_argument("value cannot be null"));
+        }
         let previous_value = {
             tracing::info!("Writing to storage");
             let mut storage = self.storage.write().await;
-            storage.insert(key, prost_to_serde_json(value))
+            storage.insert(key, value)
         };
         tracing::info!("Wrote to storage");
         let response = match previous_value {
@@ -129,6 +133,21 @@ mod tests {
         });
         let response = service.delete(request).await.unwrap().into_inner();
         assert_eq!(response.deleted, true);
+        assert_eq!(service.storage.read().await.get("key"), None);
+    }
+
+    #[tokio::test]
+    async fn test_set_null() {
+        let storage = HashMap::new();
+        let service = KeyValueService::new(storage);
+        let request = Request::new(KeyValueRequest {
+            key: "key".to_string(),
+            value: Some(prost_types::Value {
+                kind: Some(prost_types::value::Kind::NullValue(0)),
+            }),
+        });
+        let status = service.set(request).await.err().unwrap();
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
         assert_eq!(service.storage.read().await.get("key"), None);
     }
 }
