@@ -148,10 +148,14 @@ The backend service communicates with the frontend service via gRPC. You can ref
 
 ### Unit and Integration Tests
 
-Both services have unit and integration tests covering all functionalities. Run tests using:
+Both services have unit and integration tests covering all functionalities.
 
 ```bash
+# Unit tests
 cargo test
+
+# Integration tests
+cargo test -- --test-threads=1 --ignored
 ```
 
 ## Contributing

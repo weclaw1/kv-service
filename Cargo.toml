@@ -1,6 +1,6 @@
 [workspace]
 members = [
     "kv-service-frontend",
-    "kv-service-backend",
+    "kv-service-backend", "kv-service-tests",
 ]
 resolver = "2"
