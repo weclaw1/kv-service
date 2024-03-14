@@ -30,6 +30,9 @@ pub async fn put_value(
     Path(key): Path<String>,
     body: Json<Value>,
 ) -> Result<StatusCode, ServiceError> {
+    if body.0.is_null() {
+        return Ok(StatusCode::BAD_REQUEST);
+    }
     tracing::debug!("Putting value {} for key {}", body.0, key);
     let updated = state.key_value_service.put_value(&key, body.0).await?;
     let response = if updated {
@@ -184,5 +187,20 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(status, StatusCode::CREATED);
+    }
+
+    #[tokio::test]
+    async fn test_put_value_null() {
+        let key = "key".to_string();
+        let value = Value::Null;
+
+        let state = AppState {
+            key_value_service: Arc::new(MockKeyValueService::new()),
+        };
+
+        let status = put_value(State(state), Path(key), Json(value))
+            .await
+            .unwrap();
+        assert_eq!(status, StatusCode::BAD_REQUEST);
     }
 }

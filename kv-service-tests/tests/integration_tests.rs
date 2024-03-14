@@ -152,3 +152,17 @@ async fn test_kv_services_put_existing_key_different_value() {
     assert_eq!(response_get.status(), StatusCode::OK);
     assert_eq!(response_get.json::<Value>().await.unwrap(), "value2");
 }
+
+#[tokio::test]
+#[ignore]
+async fn kest_kv_services_put_null_value() {
+    let api_address = spawn_services().await;
+    let client = reqwest::Client::new();
+    let response_put = client
+        .put(format!("{}/test", api_address))
+        .json(&Value::Null)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response_put.status(), StatusCode::BAD_REQUEST);
+}
