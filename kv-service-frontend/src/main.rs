@@ -1,4 +1,6 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use axum_server::tls_openssl::OpenSSLConfig;
+use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
@@ -26,7 +28,33 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let client = KeyValueServiceClient::connect("http://127.0.0.1:8081").await?;
+    let config = OpenSSLConfig::from_pem_file(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .parent().unwrap_or(&PathBuf::new())
+                .join("tls")
+                .join("client.crt"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .parent().unwrap_or(&PathBuf::new())
+                .join("tls")
+                .join("client.key"),
+        )?;
+
+    let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap_or(&PathBuf::new()).join("tls");
+    let root_cert = std::fs::read_to_string(data_dir.join("root.crt"))?;
+    let client_cert = std::fs::read_to_string(data_dir.join("client.crt"))?;
+    let client_key = std::fs::read_to_string(data_dir.join("client.key"))?;
+    let client_identity = Identity::from_pem(client_cert, client_key);
+    let ca = Certificate::from_pem(root_cert);
+    let tls = ClientTlsConfig::new()
+        .ca_certificate(ca)
+        .identity(client_identity)
+        .domain_name("example.com");
+
+    let channel = Channel::from_static("https://127.0.0.1:8081")
+        .tls_config(tls)?
+        .connect()
+        .await.expect("Couldn't connect to kv-service-backend, make sure it's running.");
+    let client = KeyValueServiceClient::new(channel);
 
     let state = controllers::AppState {
         key_value_service: Arc::new(GrpcKeyValueService::new(KeyValueServiceGrpcClient(client))),
@@ -36,7 +64,8 @@ async fn main() -> anyhow::Result<()> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     tracing::info!("Listening on {}", addr);
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    axum_server::bind_openssl(addr, config)
+        .serve(app.into_make_service())
+        .await?;
     Ok(())
 }

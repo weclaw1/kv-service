@@ -40,7 +40,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 sudo dnf install git
 
 # Install OpenSSL
-sudo dnf install openssl-devel
+sudo dnf install openssl
 
 # Install Protocol Buffers compiler and resource files
 sudo dnf install protobuf-compiler protobuf-devel
@@ -80,10 +80,17 @@ cd kv-service
 You need to generate TLS certificates for HTTPS support. You can use OpenSSL or any other tool for this purpose.
 
 ```bash
-openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 365
+#Create a CA
+openssl req -x509 -noenc -subj '/CN=example.com' -newkey rsa:4096 -keyout root.key -out root.crt
+
+#Create a certificate signing request
+openssl req -noenc -newkey rsa:4096 -keyout client.key -out client.csr -subj '/CN=example.com' -addext subjectAltName=DNS:example.com
+
+#Sign it using your CA
+openssl x509 -req -in client.csr -CA root.crt -CAkey root.key -days 365 -out client.crt -copy_extensions copy
 ```
 
-Place `key.pem` and `cert.pem` files in the appropriate directories within each service.
+Place `client.crt`, `client.key` and `root.crt` files in the `tls` directory.
 
 ### Building the Services
 In the `kv-service` folder run
