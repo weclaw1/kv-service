@@ -22,8 +22,10 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    
-    let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap_or(&PathBuf::new()).join("tls");
+    let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap_or(&PathBuf::new())
+        .join("tls");
     let cert = std::fs::read_to_string(data_dir.join("client.crt"))?;
     let key = std::fs::read_to_string(data_dir.join("client.key"))?;
 

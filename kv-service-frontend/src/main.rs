@@ -1,5 +1,5 @@
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use axum_server::tls_openssl::OpenSSLConfig;
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -29,17 +29,22 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let config = OpenSSLConfig::from_pem_file(
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .parent().unwrap_or(&PathBuf::new())
-                .join("tls")
-                .join("client.crt"),
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .parent().unwrap_or(&PathBuf::new())
-                .join("tls")
-                .join("client.key"),
-        )?;
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap_or(&PathBuf::new())
+            .join("tls")
+            .join("client.crt"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap_or(&PathBuf::new())
+            .join("tls")
+            .join("client.key"),
+    )?;
 
-    let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap_or(&PathBuf::new()).join("tls");
+    let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap_or(&PathBuf::new())
+        .join("tls");
     let root_cert = std::fs::read_to_string(data_dir.join("root.crt"))?;
     let client_cert = std::fs::read_to_string(data_dir.join("client.crt"))?;
     let client_key = std::fs::read_to_string(data_dir.join("client.key"))?;
@@ -53,7 +58,8 @@ async fn main() -> anyhow::Result<()> {
     let channel = Channel::from_static("https://127.0.0.1:8081")
         .tls_config(tls)?
         .connect()
-        .await.expect("Couldn't connect to kv-service-backend, make sure it's running.");
+        .await
+        .expect("Couldn't connect to kv-service-backend, make sure it's running.");
     let client = KeyValueServiceClient::new(channel);
 
     let state = controllers::AppState {
